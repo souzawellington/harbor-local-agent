@@ -1,0 +1,10 @@
+{
+  "tasks": [
+    {
+      "id": 1,
+      "title": "Read notes/welcome.md with the agent",
+      "done": false,
+      "created": "2026-10-16"
+    }
+  ]
+}
