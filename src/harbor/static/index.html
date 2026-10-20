@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Harbor</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f3f1eb;
+        --panel: #fbfaf6;
+        --ink: #1c1b17;
+        --muted: #6d685f;
+        --line: #e2ddd3;
+        --accent: #1a6b64;
+        --accent-ink: #f7fffd;
+        --danger-bg: #f8ece6;
+        --danger-ink: #8a3418;
+        --ok: #1a6b64;
+        --bad: #9a3b22;
+        --shadow: 0 18px 50px rgba(40, 36, 28, 0.06);
+        --sans: "Avenir Next", "Segoe UI", "Noto Sans", "Liberation Sans", sans-serif;
+        --mono: "IBM Plex Mono", "ui-monospace", "SFMono-Regular", "Liberation Mono", monospace;
+      }
+      html[data-theme="dark"] {
+        color-scheme: dark;
+        --bg: #121311;
+        --panel: #1c1d1a;
+        --ink: #f4f1e8;
+        --muted: #aaa396;
+        --line: #2e2f2b;
+        --accent: #7dcec4;
+        --accent-ink: #10211f;
+        --danger-bg: #2a1c17;
+        --danger-ink: #f0b5a0;
+        --ok: #7dcec4;
+        --bad: #e08a72;
+        --shadow: 0 18px 50px rgba(0, 0, 0, 0.28);
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; min-height: 100%; }
+      body {
+        font-family: var(--sans);
+        background: var(--bg);
+        color: var(--ink);
+        line-height: 1.5;
+      }
+      .shell {
+        max-width: 1120px;
+        margin: 0 auto;
+        padding: 32px 24px 48px;
+      }
+      header {
+        display: flex;
+        justify-content: space-between;
+        gap: 24px;
+        align-items: flex-end;
+        margin-bottom: 28px;
+      }
+      .brand { display: flex; gap: 16px; align-items: center; }
+      .mark {
+        width: 44px;
+        height: 44px;
+        border-radius: 14px;
+        display: grid;
+        place-items: center;
+        background: var(--accent);
+        color: var(--accent-ink);
+        font-weight: 650;
+        letter-spacing: -0.04em;
+      }
+      h1 {
+        margin: 0;
+        font-size: 1.7rem;
+        font-weight: 620;
+        letter-spacing: -0.03em;
+      }
+      .tag { margin: 2px 0 0; color: var(--muted); font-size: 0.95rem; }
+      .controls { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
+      label {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        color: var(--muted);
+        font-size: 0.78rem;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+      select, textarea, button {
+        font: inherit;
+        color: var(--ink);
+      }
+      select, .ghost, .send {
+        border: 1px solid var(--line);
+        background: var(--panel);
+        border-radius: 12px;
+      }
+      select {
+        min-width: 180px;
+        padding: 10px 12px;
+        text-transform: none;
+        letter-spacing: 0;
+        font-size: 0.95rem;
+      }
+      button { cursor: pointer; }
+      .ghost, .send { padding: 10px 14px; }
+      .ghost:hover, .send:hover { border-color: var(--accent); }
+      .banner {
+        display: none;
+        margin-bottom: 20px;
+        padding: 16px 18px;
+        border-radius: 16px;
+        background: var(--danger-bg);
+        color: var(--danger-ink);
+        border: 1px solid transparent;
+      }
+      .banner.show { display: flex; justify-content: space-between; gap: 16px; align-items: center; }
+      .banner p { margin: 0; }
+      .banner button {
+        border: 0;
+        background: transparent;
+        color: inherit;
+        text-decoration: underline;
+        padding: 0;
+        white-space: nowrap;
+      }
+      main {
+        display: grid;
+        grid-template-columns: minmax(0, 1.4fr) minmax(280px, 0.8fr);
+        gap: 20px;
+        align-items: stretch;
+      }
+      .panel {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 22px;
+        box-shadow: var(--shadow);
+        min-height: 560px;
+        display: flex;
+        flex-direction: column;
+      }
+      .chat { padding: 8px 8px 12px; }
+      #transcript {
+        flex: 1;
+        overflow: auto;
+        padding: 20px 18px 8px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+      .bubble {
+        max-width: 42rem;
+        padding: 12px 14px;
+        border-radius: 16px;
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+      .bubble.user {
+        align-self: flex-end;
+        background: var(--accent);
+        color: var(--accent-ink);
+      }
+      .bubble.agent, .bubble.pending, .bubble.error {
+        align-self: flex-start;
+        background: transparent;
+        border: 1px solid var(--line);
+      }
+      .bubble.pending { color: var(--muted); }
+      .bubble.error { color: var(--danger-ink); background: var(--danger-bg); border-color: transparent; }
+      .who {
+        display: block;
+        margin-bottom: 4px;
+        font-size: 0.75rem;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        opacity: 0.75;
+      }
+      form {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 10px;
+        padding: 8px 10px 8px;
+        border-top: 1px solid var(--line);
+      }
+      textarea {
+        resize: vertical;
+        min-height: 52px;
+        max-height: 180px;
+        border: 0;
+        background: transparent;
+        padding: 12px 8px;
+        outline: none;
+      }
+      textarea:disabled { opacity: 0.6; }
+      .send {
+        align-self: end;
+        background: var(--accent);
+        color: var(--accent-ink);
+        border-color: transparent;
+        font-weight: 600;
+      }
+      .send:disabled { opacity: 0.45; cursor: not-allowed; }
+      aside { padding: 22px 18px; }
+      aside h2 {
+        margin: 0 0 6px;
+        font-size: 1rem;
+        font-weight: 620;
+        letter-spacing: -0.02em;
+      }
+      .aside-note { margin: 0 0 16px; color: var(--muted); font-size: 0.9rem; }
+      ol { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+      li.event {
+        border-top: 1px solid var(--line);
+        padding-top: 12px;
+      }
+      li.event:first-child { border-top: 0; padding-top: 0; }
+      .event-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+        align-items: baseline;
+      }
+      .name { font-family: var(--mono); font-size: 0.92rem; }
+      .badge {
+        font-size: 0.72rem;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+      .badge.ok { color: var(--ok); }
+      .badge.bad { color: var(--bad); }
+      .badge.muted { color: var(--muted); }
+      pre {
+        margin: 8px 0 0;
+        white-space: pre-wrap;
+        word-break: break-word;
+        font-family: var(--mono);
+        font-size: 0.78rem;
+        color: var(--muted);
+        line-height: 1.45;
+      }
+      .summary { margin: 8px 0 0; font-size: 0.92rem; }
+      .empty { color: var(--muted); margin: 8px 0 0; }
+      .meta {
+        margin-top: 22px;
+        color: var(--muted);
+        font-size: 0.82rem;
+      }
+      @media (max-width: 860px) {
+        .shell { padding: 20px 14px 32px; }
+        header { flex-direction: column; align-items: flex-start; }
+        main { grid-template-columns: 1fr; }
+        .panel { min-height: 0; }
+        #transcript { min-height: 320px; }
+        .banner.show { flex-direction: column; align-items: flex-start; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="shell">
+      <header>
+        <div class="brand">
+          <div class="mark" aria-hidden="true">H</div>
+          <div>
+            <h1>Harbor</h1>
+            <p class="tag">A local agent for notes, public pages, arithmetic, and tasks.</p>
+          </div>
+        </div>
+        <div class="controls">
+          <label>
+            Model
+            <select id="model" aria-label="Ollama model"></select>
+          </label>
+          <button class="ghost" id="theme" type="button">Dark mode</button>
+          <button class="ghost" id="reset" type="button">New chat</button>
+        </div>
+      </header>
+      <div id="banner" class="banner" role="alert">
+        <p id="banner-text"></p>
+        <button id="retry" type="button">Check again</button>
+      </div>
+      <main>
+        <section class="panel chat" aria-label="Chat">
+          <div id="transcript" aria-live="polite"></div>
+          <form id="composer">
+            <textarea id="input" rows="2" placeholder="Ask Harbor about a note, a sum, or a public page."></textarea>
+            <button class="send" id="send" type="submit">Send</button>
+          </form>
+        </section>
+        <aside class="panel" aria-label="Tool calls">
+          <h2>Tool calls</h2>
+          <p class="aside-note">Each call shows the name, the arguments, and a short result.</p>
+          <ol id="tools"></ol>
+          <p class="empty" id="tools-empty">Nothing has been called yet.</p>
+          <p class="meta" id="meta"></p>
+        </aside>
+      </main>
+    </div>
+    <script>
+      const transcript = document.getElementById("transcript");
+      const tools = document.getElementById("tools");
+      const toolsEmpty = document.getElementById("tools-empty");
+      const banner = document.getElementById("banner");
+      const bannerText = document.getElementById("banner-text");
+      const modelSelect = document.getElementById("model");
+      const input = document.getElementById("input");
+      const send = document.getElementById("send");
+      const themeButton = document.getElementById("theme");
+      const meta = document.getElementById("meta");
+      let busy = false;
+      let ollamaUp = false;
+
+      function applyTheme(theme) {
+        document.documentElement.dataset.theme = theme;
+        themeButton.textContent = theme === "dark" ? "Light mode" : "Dark mode";
+        localStorage.setItem("harbor-theme", theme);
+      }
+      const stored = localStorage.getItem("harbor-theme");
+      const preferred = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+      applyTheme(stored || preferred);
+      themeButton.addEventListener("click", () => {
+        applyTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark");
+      });
+
+      function setBanner(message) {
+        if (!message) {
+          banner.classList.remove("show");
+          bannerText.textContent = "";
+          return;
+        }
+        bannerText.textContent = message;
+        banner.classList.add("show");
+      }
+
+      function setBusy(value) {
+        busy = value;
+        send.disabled = value || !ollamaUp;
+        input.disabled = value || !ollamaUp;
+      }
+
+      function addBubble(kind, who, text) {
+        const node = document.createElement("div");
+        node.className = "bubble " + kind;
+        const label = document.createElement("span");
+        label.className = "who";
+        label.textContent = who;
+        const body = document.createElement("div");
+        body.textContent = text;
+        node.append(label, body);
+        transcript.append(node);
+        transcript.scrollTop = transcript.scrollHeight;
+        return node;
+      }
+
+      function addTrace(trace) {
+        toolsEmpty.hidden = true;
+        const item = document.createElement("li");
+        item.className = "event";
+        const head = document.createElement("div");
+        head.className = "event-head";
+        const name = document.createElement("span");
+        name.className = "name";
+        name.textContent = trace.name || "none";
+        const badge = document.createElement("span");
+        badge.className = "badge " + (trace.muted ? "muted" : trace.ok ? "ok" : "bad");
+        badge.textContent = trace.muted ? "none" : trace.ok ? "ok" : "error";
+        head.append(name, badge);
+        item.append(head);
+        if (!trace.muted) {
+          const args = document.createElement("pre");
+          args.textContent = JSON.stringify(trace.arguments || {}, null, 2);
+          const summary = document.createElement("p");
+          summary.className = "summary";
+          summary.textContent = trace.summary || "";
+          item.append(args, summary);
+        }
+        tools.append(item);
+      }
+
+      async function loadStatus() {
+        const response = await fetch("/api/status");
+        const data = await response.json();
+        modelSelect.replaceChildren();
+        for (const name of data.models || []) {
+          const option = document.createElement("option");
+          option.value = name;
+          option.textContent = name;
+          if (name === data.model) option.selected = true;
+          modelSelect.append(option);
+        }
+        if (!modelSelect.options.length && data.configured_model) {
+          const option = document.createElement("option");
+          option.value = data.configured_model;
+          option.textContent = data.configured_model;
+          modelSelect.append(option);
+        }
+        meta.textContent = data.host ? "Ollama " + data.host : "";
+        ollamaUp = Boolean(data.ok);
+        setBanner(data.ok ? "" : data.error || "Ollama is not running.");
+        setBusy(false);
+      }
+
+      document.getElementById("retry").addEventListener("click", () => {
+        loadStatus().catch(() => setBanner("Could not reach the Harbor UI."));
+      });
+      document.getElementById("reset").addEventListener("click", async () => {
+        await fetch("/api/reset", { method: "POST" });
+        transcript.replaceChildren();
+        tools.replaceChildren();
+        toolsEmpty.hidden = false;
+      });
+
+      document.getElementById("composer").addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const text = input.value.trim();
+        if (!text || busy || !ollamaUp) return;
+        input.value = "";
+        addBubble("user", "You", text);
+        const pending = addBubble("pending", "Harbor", "Working…");
+        setBusy(true);
+        try {
+          const response = await fetch("/api/chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ message: text, model: modelSelect.value }),
+          });
+          const data = await response.json();
+          pending.remove();
+          if (!response.ok) {
+            const detail = data.detail || "Harbor could not finish that request.";
+            addBubble("error", "Harbor", detail);
+            if (response.status === 503) {
+              ollamaUp = false;
+              setBanner(detail);
+            }
+            return;
+          }
+          if (!data.traces || data.traces.length === 0) {
+            addTrace({ name: "tools", muted: true, ok: true });
+          } else {
+            for (const trace of data.traces) addTrace(trace);
+          }
+          addBubble("agent", "Harbor", data.answer || "");
+        } catch (error) {
+          pending.remove();
+          addBubble("error", "Harbor", "The UI lost its connection to Harbor.");
+        } finally {
+          setBusy(false);
+        }
+      });
+
+      input.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" && !event.shiftKey) {
+          event.preventDefault();
+          document.getElementById("composer").requestSubmit();
+        }
+      });
+
+      loadStatus().catch(() => setBanner("Could not reach the Harbor UI."));
+    </script>
+  </body>
+</html>

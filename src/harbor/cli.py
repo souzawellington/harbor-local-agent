@@ -94,6 +94,39 @@ def chat(
         _echo_result(result)
 
 
+@app.command()
+def web(
+    model: str | None = typer.Option(None, "--model", "-m", help="Ollama model name."),
+    workspace: Path | None = typer.Option(
+        None, "--workspace", "-w", help="Folder the file and task tools may use."
+    ),
+    host: str | None = typer.Option(None, "--host", help="Ollama base URL."),
+    max_steps: int | None = typer.Option(
+        None, "--max-steps", min=1, max=20, help="Model round-trips per message."
+    ),
+    bind: str = typer.Option("127.0.0.1", "--bind", help="Local address for the web UI."),
+    port: int = typer.Option(8765, "--port", min=1, max=65535, help="Port for the web UI."),
+) -> None:
+    """Open the local web UI. It uses the same agent loop as the CLI."""
+    settings = _settings(model=model, workspace=workspace, host=host, max_steps=max_steps)
+    if bind not in {"127.0.0.1", "localhost", "::1"}:
+        typer.echo(
+            "warning: Harbor has no login. A non-local bind exposes the workspace tools.",
+            err=True,
+        )
+    from harbor.web import create_app
+
+    typer.echo(f"Harbor UI  http://{bind}:{port}")
+    typer.echo(f"model={settings.model}  workspace={settings.workspace}")
+    typer.echo("Press Ctrl+C to stop.")
+    try:
+        import uvicorn
+    except ImportError as exc:
+        typer.echo("error: uvicorn is not installed", err=True)
+        raise typer.Exit(code=1) from exc
+    uvicorn.run(create_app(settings), host=bind, port=port, log_level="info")
+
+
 @app.command("tools")
 def list_tools(
     workspace: Path | None = typer.Option(

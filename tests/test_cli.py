@@ -22,6 +22,7 @@ def test_help_lists_commands() -> None:
     assert "chat" in result.stdout
     assert "run" in result.stdout
     assert "tools" in result.stdout
+    assert "web" in result.stdout
 
 
 def test_tools_lists_the_sandboxed_set(tmp_path: Path) -> None:
